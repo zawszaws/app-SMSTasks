@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="app_name">SMS Tasks</string>
+<string name="old_pass">Enter Old Password.</string>
+<string name="new_pass">Enter New Password.</string>
+<string name="confirm_pass">Confirm New Password.</string>
+<string name="change_pass_button_text">Apply Settings</string>
+<string name="enable_service_text">Enable Service.</string>
+</resources>
