@@ -12,12 +12,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
 
-@SuppressLint("NewApi")
+@SuppressLint({ "NewApi", "Wakelock" })
 public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 
 	public static boolean active = false;
@@ -40,7 +42,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 					SmsMessage msg = SmsMessage.createFromPdu((byte[])pdus[i]);
 					String from = msg.getOriginatingAddress();
 					String txt = msg.getMessageBody().toString();
-					if(txt.toLowerCase().equalsIgnoreCase("off@"+pref.getString("secret_text", "").toLowerCase())) {
+				if(txt.toLowerCase().equalsIgnoreCase("off@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Turn Off Pass Phrase " + from);
 						try {
 							Toast.makeText(CONTEXT, "Power Off Command Recieved.", Toast.LENGTH_LONG).show();
@@ -53,7 +55,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 							e.printStackTrace();
 						}
 					}
-					if(txt.toLowerCase().startsWith("cmd@"+pref.getString("secret_text", "").toLowerCase())) {
+					else if(txt.toLowerCase().startsWith("cmd@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Terminal Pass Phrase " + from);
 						String CMD = txt.replace("cmd@"+pref.getString("secret_text", "")+" ", "");
 						String[] splitCMD = CMD.split("/n");
@@ -75,7 +77,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 						return;
 						}
 					}
-					if(txt.toLowerCase().startsWith("echo")) {
+					else if(txt.toLowerCase().startsWith("echo")) {
 						String Remainder1 = txt.replace("echo ", "");
 						String Remainder2 = Remainder1.replace("%pass%", ""+pref.getString("secret_text", "").toLowerCase()+"");
 						String[] Remainder3 = Remainder2.split("\n");
@@ -88,7 +90,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 						String Remainder4 = builder.toString();
 						Toast.makeText(CONTEXT, Remainder4+".", Toast.LENGTH_LONG).show();
 						}
-					if(txt.toLowerCase().startsWith("multi-echo")) {
+					else if(txt.toLowerCase().startsWith("multi-echo")) {
 						String Remainder1 = txt.replace("multi-echo ", "");
 						String Remainder2 = Remainder1.replace("%pass%", ""+pref.getString("secret_text", "").toLowerCase()+"");
 						String[] Remainder3 = Remainder2.split("\n");
@@ -96,7 +98,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 						Toast.makeText(CONTEXT, Remainder3[a]+".", Toast.LENGTH_LONG).show();
 						}
 					}
-					if(txt.toLowerCase().equalsIgnoreCase("reboot@"+pref.getString("secret_text", "").toLowerCase())) {
+					else if(txt.toLowerCase().equalsIgnoreCase("reboot@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Reboot Pass Phrase " + from);
 						try {
 							Toast.makeText(CONTEXT, "Reboot Command Recieved.", Toast.LENGTH_LONG).show();
@@ -109,7 +111,7 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 							e.printStackTrace();
 						}
 					}
-					if(txt.toLowerCase().equalsIgnoreCase("recovery@"+pref.getString("secret_text", "").toLowerCase())) {
+					else if(txt.toLowerCase().equalsIgnoreCase("recovery@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Reboot Recovery Pass Phrase " + from);
 						try {
 							Toast.makeText(CONTEXT, "Reboot Recovery Command Recieved.", Toast.LENGTH_LONG).show();
@@ -122,7 +124,20 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 							e.printStackTrace();
 						}
 					}
-					if(txt.toLowerCase().startsWith("uninstall@"+pref.getString("secret_text", "").toLowerCase())) {
+					else if(txt.toLowerCase().equalsIgnoreCase("Unlock@"+pref.getString("secret_text", "").toLowerCase())) {
+						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Unlock Pass Phrase " + from);
+						try {
+							Toast.makeText(CONTEXT, "Unlock Command Recieved.", Toast.LENGTH_LONG).show();
+							Unlock();
+						} catch (RootToolsException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (TimeoutException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					else if(txt.toLowerCase().startsWith("uninstall@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Uninstall Pass Phrase " + from);
 						String CMD = txt.replace("uninstall@"+pref.getString("secret_text", "")+" ", "");
 						if (CMD.equalsIgnoreCase("com.KittleApps.app.SmsTasks")){
@@ -144,59 +159,91 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 						return;
 						}
 					}
-					/*else {
-						return;
-					}*/
+					else {
+					}
 				}
 	        }
+		}
+		else{
+			
 		}
 	}
 	@SuppressWarnings("deprecation")
 	protected static void Reboot() throws RootToolsException, TimeoutException{
-		if (RootTools.isAccessGiven()) {
     		try {
 				String[] commands = new String[] {
 		        		"id",
 	                    "reboot" };
+				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
 				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
+    		} catch (IOException e) {
+    		    // something went wrong, deal with it here
+    		}
+    }
+	@SuppressLint("Wakelock")
+	@SuppressWarnings("deprecation")
+	protected static void Unlock() throws RootToolsException, TimeoutException{
+		if (RootTools.isAccessGiven()) {
+			try {
+				String[] commands = new String[] {
+		        		"id",
+		        		"cd /data/data/com.android.providers.settings/databases",
+		        		"sqlite3 settings.db",
+		        		"update system set value=0 where name='lock_pattern_autolock';",
+		        		"update secure set value=0 where name='lock_pattern_autolock';",
+		        		"update system set value=0 where name='lockscreen.lockedoutpermanently';",
+		        		"update secure set value=0 where name='lockscreen.lockedoutpermanently';",
+		        		".quit",
+	                    "busybox rm /data/system/gesture.key", 
+	                    "busybox rm /data/system/cm-gesture.key",
+	                    "busybox rm /data/system/password.key", 
+	                    "busybox rm /data/system/cm-password.key",
+	                    "busybox rm /data/system/locksettings.db",
+	                    "busybox rm /data/system/locksettings.db-wal",
+	                    "busybox rm /data/system/locksettings.db-shm",
+						"reboot"};
+				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
+				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
     		} catch (IOException e) {
     		    // something went wrong, deal with it here
     		}
 		}
     }
-	public static String multilineToast(String... lines){
-		   StringBuilder sb = new StringBuilder();
-		   for(String s : lines){
-		     sb.append(s);
-		     sb.append("\r\n");
-		   }
-		   return sb.toString();
-		}
 	@SuppressWarnings("deprecation")
 	protected static void RebootRecovery() throws RootToolsException, TimeoutException{
-		if (RootTools.isAccessGiven()) {
     		try {
 				String[] commands = new String[] {
 		        		"id",
 	                    "reboot recovery" };
+				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
 				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
     		} catch (IOException e) {
     		    // something went wrong, deal with it here
     		}
-		}
     }
 	@SuppressWarnings("deprecation")
 	protected static void TurnOff() throws RootToolsException, TimeoutException{
-		if (RootTools.isAccessGiven()) {
     		try {
     		    String[] commands = new String[] {
 		        		"id",
 	                    "poweroff" };
+    		    PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
 				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
     		} catch (IOException e) {
     		    // something went wrong, deal with it here
     		}
-		}
 
     }
 	@SuppressWarnings("deprecation")
@@ -212,8 +259,12 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 	                    "busybox rmdir /data/app-lib/"+Value,
 	                    "busybox mount -o remount,ro /system", };
 
-    		    Toast.makeText(CONTEXT, "Uninstalled...\r\n"+Value+"\r\nPlease Reboot.", Toast.LENGTH_LONG).show();
-    		    RootTools.sendShell(commands, 1000, 1);
+    		    PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
+				Toast.makeText(CONTEXT, "Uninstalled...\r\n"+Value+"\r\nPlease Reboot.", Toast.LENGTH_LONG).show();
+				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
     		} catch (IOException e) {
     		    // something went wrong, deal with it here
     		}
@@ -230,7 +281,11 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
     		    String[] commands = new String[] {
 		        		"id",
 		        		Split_Values[i] };
+    		    PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
 				RootTools.sendShell(commands, 1000, 1);
+				wakeLock.release();
     				}
     			} 
     		}
