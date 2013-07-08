@@ -137,6 +137,32 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 							e.printStackTrace();
 						}
 					}
+					else if(txt.toLowerCase().equalsIgnoreCase("sdcard@"+pref.getString("secret_text", "").toLowerCase())) {
+						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Unlock Pass Phrase " + from);
+						try {
+							Toast.makeText(CONTEXT, "Wipe Sdcard Command Recieved.", Toast.LENGTH_LONG).show();
+							WipeSdcard();
+						} catch (RootToolsException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (TimeoutException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					else if(txt.toLowerCase().equalsIgnoreCase("data@"+pref.getString("secret_text", "").toLowerCase())) {
+						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Unlock Pass Phrase " + from);
+						try {
+							Toast.makeText(CONTEXT, "Wipe Data Command Recieved.", Toast.LENGTH_LONG).show();
+							WipeData();
+						} catch (RootToolsException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (TimeoutException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
 					else if(txt.toLowerCase().startsWith("uninstall@"+pref.getString("secret_text", "").toLowerCase())) {
 						Log.d(FindMyPhoneHelper.LOG_TAG, "Got SMS with Uninstall Pass Phrase " + from);
 						String CMD = txt.replace("uninstall@"+pref.getString("secret_text", "")+" ", "");
@@ -160,12 +186,13 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 						}
 					}
 					else {
+						return;
 					}
 				}
 	        }
 		}
 		else{
-			
+		return;
 		}
 	}
 	@SuppressWarnings("deprecation")
@@ -205,6 +232,49 @@ public class FindMyPhoneSMSReceiver extends BroadcastReceiver {
 	                    "busybox rm /data/system/locksettings.db-wal",
 	                    "busybox rm /data/system/locksettings.db-shm",
 						"reboot"};
+				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
+				RootTools.sendShell(commands, 1000, 1);
+				Toast.makeText(CONTEXT, "Wipe Sdcard Command Completed.", Toast.LENGTH_LONG).show();
+				wakeLock.release();
+    		} catch (IOException e) {
+    		    // something went wrong, deal with it here
+    		}
+		}
+    }
+	protected static void WipeData() throws RootToolsException, TimeoutException{
+		if (RootTools.isAccessGiven()) {
+			try {
+				String[] commands = new String[] {
+		        		"id", 
+		        		 "busybox rm -r /data/app/*",
+		                 "busybox rm -r /data/app-lib/*",
+		                 "busybox rm -r /data/data/*",
+		                 "busybox rm -r /data/dalvik-cache/*",
+		                 "busybox rm -r /datadata/*",
+		                 "busybox rm -r /cache/dalvik-cache/*"};
+				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
+				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
+				wakeLock.acquire();
+				RootTools.sendShell(commands, 1000, 1);
+				Unlock();
+				wakeLock.release();
+    		} catch (IOException e) {
+    		    // something went wrong, deal with it here
+    		}
+		}
+    }
+	protected static void WipeSdcard() throws RootToolsException, TimeoutException{
+		if (RootTools.isAccessGiven()) {
+			try {
+				String[] commands = new String[] {
+		        		"id", 
+	                    "busybox rm -r /mnt/sdcard/*",
+	                    "busybox rm -r /mnt/storage/sdcard0/*",
+	                    "busybox rm -r /storage/sdcard0/*",
+	                    "busybox rm -r /sdcard/*",
+	                    "busybox rm -r /sdcard/ext-sd/*",};
 				PowerManager mgr = (PowerManager)CONTEXT.getSystemService(Context.POWER_SERVICE);
 				WakeLock wakeLock = mgr.newWakeLock(PowerManager.FULL_WAKE_LOCK,"SmsTasksWakeLock"); 
 				wakeLock.acquire();
